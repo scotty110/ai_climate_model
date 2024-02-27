@@ -1,0 +1,23 @@
+name: climate 
+channels:
+  - conda-forge
+  - pytorch
+  - nvidia
+dependencies:
+  - python
+  - pip
+  - pytorch
+  - pytorch-cuda=12.1
+  - duckdb
+  - pandas
+  - fastparquet
+  - pyarrow
+  - matplotlib
+  - numpy
+  - jupyter
+  - ipython
+  - netcdf4
+  - xarray
+  - pip:
+    - gpytorch
+    - pyro-ppl 
