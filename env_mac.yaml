@@ -1,14 +1,11 @@
 name: climate 
 channels:
   - pytorch
-  - nvidia
   - conda-forge
 dependencies:
   - python
   - pip
   - pytorch
-  - pytorch-cuda=12.1
-  - duckdb
   - pandas
   - fastparquet
   - pyarrow
