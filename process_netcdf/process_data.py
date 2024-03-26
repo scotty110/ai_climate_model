@@ -221,6 +221,7 @@ def create_pairs(d:dict) -> dict:
         - Dictionary with the keys {day, region, time, landmass, x, y}
     '''
     return_dict = {
+        'day': d['day'],
         'region': d['region'],
         'time': d['time'],
     }

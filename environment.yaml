@@ -16,6 +16,7 @@ dependencies:
   - numpy
   - jupyter
   - ipython
+  - h5py
   - netcdf4
   - xarray
   - pip:
