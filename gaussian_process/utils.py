@@ -1,3 +1,0 @@
-'''
-Going to write scripts
-'''
