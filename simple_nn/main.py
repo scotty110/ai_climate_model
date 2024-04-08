@@ -16,7 +16,7 @@ if __name__ == '__main__':
 
     # Model 
     out_dim = int(70*2)
-    model = utils.DepthWiseConv2d(out_dim=out_dim)
+    model = utils.ConvTrans()
 
     for i, (l,x,y) in enumerate(t_dl):
         print(l.shape, x.shape, y.shape)

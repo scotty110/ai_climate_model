@@ -13,6 +13,7 @@ from torch.utils.data import DataLoader, Dataset
 '''
 Data loading and processing functions
 '''
+
 def load_hdf5(filename:str):
     '''
     Load data from an HDF5 file and return a list of dictionaries.
@@ -140,7 +141,7 @@ class DepthWiseConv2d(nn.Module):
         self.out_dim = out_dim
         self.linear = nn.Linear(input_shape[0], self.input_shape[0]*self.out_dim)
 
-    def forward(self, x):
+    def forward(self, x:torch.tensor) -> torch.tensor:
         # Do depthwise convolution (no idea if this is a good idea)
         x = x.view(x.size(0), -1, x.size(3), x.size(4))
         x = self.depthwise(x)
@@ -150,4 +151,52 @@ class DepthWiseConv2d(nn.Module):
         # Want to add an output dim (could handle in larger model, but for now just do it here)
         x = self.linear(x)
         x = x.reshape(x.size(0), self.input_shape[0], self.out_dim)
+        return x
+
+
+class InnerTransformer(nn.Module):
+    def __init__(self, input_dim:int, output_dim:int, num_layers:int=2):
+        super(InnerTransformer, self).__init__()
+        '''
+        Args:
+            - input_dim (int): Number of input features
+            - output_dim (int): Number of output features
+            - num_layers (int): Number of transformer layers, default is 1
+        '''
+        self.input_dim = input_dim
+        self.output_dim = output_dim
+        self.num_layers = num_layers
+
+        # Build transformer layers
+        self.layers = nn.ModuleList([nn.TransformerEncoderLayer(d_model=self.input_dim, nhead=1) for _ in range(self.num_layers)]) # Make it simple for now
+
+        # Linear layer to output
+        self.linear = nn.Linear(self.input_dim, self.output_dim)
+
+    def forward(self, x:torch.tensor) -> torch.tensor:
+        for layer in self.layers:
+            x = layer(x)
+        return x
+
+
+class ConvTrans(nn.Module):
+    def __init__(self, input_shape:list[int]=[70,3,2,2], inner_shape:int=int(70*2), out_dim:int=int(2*2*2), num_layers:int=2):
+        super(ConvTrans, self).__init__()
+        '''
+        Build a DepthWiseConv2d model followed by a Transformer model followed by an output layer(tbd)
+        Args:
+            - input_shape (list): Shape of the input tensor, default is [70,3,2,2] (70 cells, 3 features, 2x2 grid). 
+            - inner_shape (int): Number of features to pass to the transformer, default is 70*2
+            - out_dim (int): Number of output features, default is 70*2*2*2 (70 cells, 2 features, 2x2 grid)
+            - num_layers (int): Number of transformer layers, default is 2
+        '''
+        self.depthwise = DepthWiseConv2d(out_dim=inner_shape, input_shape=input_shape)
+        self.transformer = InnerTransformer(input_dim=inner_shape, output_dim=out_dim, num_layers=num_layers)
+        self.output_linear = nn.Linear(inner_shape, out_dim)
+
+    def forward(self, x:torch.tensor) -> torch.tensor:
+        x = self.depthwise(x)
+        x = self.transformer(x)
+        x = self.output_linear(x)
+        x = x.reshape(x.size(0), 70, 2, 2, 2) # Maybe make args??? IDK
         return x
