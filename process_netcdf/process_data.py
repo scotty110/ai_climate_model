@@ -285,7 +285,7 @@ def save_h5(data:list[dict], filename:str):
 
 
 if __name__ == '__main__':
-    file_dir = '/home/squirt/Documents/data/rp_weather_data/'
+    file_dir = '/home/squirt/Documents/data/weather_data/'
 
     # Load files into data list of lists 
     days = get_days(file_dir)
