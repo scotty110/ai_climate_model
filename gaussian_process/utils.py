@@ -5,9 +5,6 @@ Training loop is in main.py
 import torch
 import h5py as h5
 
-import torch.nn as nn
-from torch.utils.data import DataLoader, Dataset
-
 #-------------------------
 
 '''
@@ -68,43 +65,31 @@ def generate_stacks(data:list[dict]) -> tuple[torch.Tensor, torch.Tensor, torch.
     return (landmass, x, y)
 
 
-class weather_dataset(Dataset):
+def get_data(fname:str, split:int) -> tuple[tuple[torch.tensor], tuple[torch.tensor]]:
     '''
-    PyTorch Dataset class for weather data.
-    '''
-    def __init__(self, data:list[dict]):
-        self.landmass, self.x, self.y = generate_stacks(data)
-        self.length = len(self.landmass)
-
-    def __len__(self):
-        return self.length
-
-    def __getitem__(self, idx):
-        return (self.landmass[idx], self.x[idx], self.y[idx])
-
-
-def get_dataloaders(fname:str, batch_size:int, split:int) -> tuple[DataLoader, DataLoader]:
-    '''
-    Create PyTorch DataLoader objects for training and validation data.
+    Create PyTorch tensors to be used for training the GP
     Inputs:
         - fname (str): Path to the HDF5 file.
-        - batch_size (int): Batch size for the DataLoader objects.
         - split (float): Fraction of the data to use for training.     
     Outputs:
-        - train_loader (torch.utils.data.DataLoader): DataLoader for training data.
-        - test_loader (torch.utils.data.DataLoader): DataLoader for test data.
+        - Tuple of tuple of tensors to be used for training and validation.
     '''
     # Load data and create tensor 
     data = load_hdf5(fname)
-    dataset = weather_dataset(data)
-    
-    train_size = int(split * len(dataset))
-    val_size = len(dataset) - train_size
-    
-    # Split data into training and validation sets
-    train_dataset, test_dataset = torch.utils.data.random_split(dataset, [train_size, val_size])
+    stacks = generate_stacks(data)
 
-    # Create DataLoader objects
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True)
-    return train_loader, test_loader
+    # Split data into training and validation sets 
+    indices = torch.randperm(stacks[0].size(0))
+
+    # Shuffle
+    landmass = stacks[0][indices]
+    x = stacks[1][indices]
+    y = stacks[2][indices]
+
+    # Split
+    split_idx = int(len(landmass) * split)
+
+    # Training data
+    train_data = (landmass[:split_idx], x[:split_idx], y[:split_idx])
+    val_data = (landmass[split_idx:], x[split_idx:], y[split_idx:])
+    return train_data, val_data

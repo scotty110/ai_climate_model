@@ -180,23 +180,26 @@ class InnerTransformer(nn.Module):
 
 
 class ConvTrans(nn.Module):
-    def __init__(self, input_shape:list[int]=[70,3,2,2], inner_shape:int=int(70*2), out_dim:int=int(2*2*2), num_layers:int=2):
+    def __init__(self, input_shape:list[int]=[71,3,2,2], inner_shape:int=int(71*2), out_dim:int=int(2*2*2), num_layers:int=2):
         super(ConvTrans, self).__init__()
         '''
         Build a DepthWiseConv2d model followed by a Transformer model followed by an output layer(tbd)
         Args:
-            - input_shape (list): Shape of the input tensor, default is [70,3,2,2] (70 cells, 3 features, 2x2 grid). 
+            - input_shape (list): Shape of the input tensor, default is [71,3,2,2] (70 cells, 3 features, 2x2 grid, followed by spacial cell). 
             - inner_shape (int): Number of features to pass to the transformer, default is 70*2
             - out_dim (int): Number of output features, default is 70*2*2*2 (70 cells, 2 features, 2x2 grid)
             - num_layers (int): Number of transformer layers, default is 2
         '''
         self.depthwise = DepthWiseConv2d(out_dim=inner_shape, input_shape=input_shape)
         self.transformer = InnerTransformer(input_dim=inner_shape, output_dim=out_dim, num_layers=num_layers)
+        self.output_cov = nn.Conv1d(in_channels=input_shape[0], out_channels=70, kernel_size=1)
         self.output_linear = nn.Linear(inner_shape, out_dim)
 
     def forward(self, x:torch.tensor) -> torch.tensor:
         x = self.depthwise(x)
         x = self.transformer(x)
+        x = self.output_cov(x)
+        x = x.squeeze()
         x = self.output_linear(x)
         x = x.reshape(x.size(0), 70, 2, 2, 2) # Maybe make args??? IDK
         return x
