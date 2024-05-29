@@ -65,12 +65,13 @@ def generate_stacks(data:list[dict]) -> tuple[torch.Tensor, torch.Tensor, torch.
     return (landmass, x, y)
 
 
-def get_data(fname:str, split:int) -> tuple[tuple[torch.tensor], tuple[torch.tensor]]:
+def get_data(fname:str, split:int, simplify=False) -> tuple[tuple[torch.tensor], tuple[torch.tensor]]:
     '''
     Create PyTorch tensors to be used for training the GP
     Inputs:
         - fname (str): Path to the HDF5 file.
         - split (float): Fraction of the data to use for training.     
+        - simplify (bool): If True, only use the first 2000 entries in a random perm of the dataset.
     Outputs:
         - Tuple of tuple of tensors to be used for training and validation.
     '''
@@ -80,6 +81,8 @@ def get_data(fname:str, split:int) -> tuple[tuple[torch.tensor], tuple[torch.ten
 
     # Split data into training and validation sets 
     indices = torch.randperm(stacks[0].size(0))
+    if simplify:
+        indices = indices[:2000]
 
     # Shuffle
     landmass = stacks[0][indices]
