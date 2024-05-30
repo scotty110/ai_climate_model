@@ -86,26 +86,31 @@ def eval(model:nn.Module, dl:torch.utils.data.DataLoader, loss:nn.Module) -> flo
     return total_loss / len(dl)
 
 
-def fold(data_file:str, model:nn.Module) -> tuple[float, float]:
+def fold(data_file:str, model:nn.Module, i:int) -> tuple[float, float]:
     '''
     Do a cross fold training session with early stopping
     Inputs:
         - data_file (str): The file to load data from
         - model (nn.Module): The model to train
+        - i (int): The fold number
     '''
     loss_fn = nn.MSELoss()
     model = model.double().cuda()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
     # New Split  
-    t_dl, v_dl = utils.get_dataloaders(data_file, 256, 0.7)
+    t_dl, v_dl = utils.get_dataloaders(data_file, 256, 0.5)
 
     # Early Stopping 
     eval_loss = -1*float('inf') 
     train_loss = 0 
-    while train_loss > eval_loss:
+    eps = 1e-6
+    while (train_loss > eval_loss) and abs(eval_loss - train_loss) > eps:
         train_loss = train(model, t_dl, optimizer, loss_fn)
         eval_loss = eval(model, v_dl, loss_fn)
+
+    # Save the model
+    torch.save(model.state_dict(), join('saved_models', f'model_{i}.pt') )
 
     return (train_loss, eval_loss)
 
@@ -119,9 +124,10 @@ if __name__ == '__main__':
     eval_loss_rec = []
     for i in range(folds):
         model = simpleNN()
-        train_loss, eval_loss = fold(fname, model)
+        train_loss, eval_loss = fold(fname, model, i)
         train_loss_rec.append(train_loss)
         eval_loss_rec.append(eval_loss)
+        print(f'Fold {i} Eval Loss: {eval_loss}')
 
     avg_train_loss = torch.mean(torch.tensor(train_loss_rec)).item()
     avg_eval_loss = torch.mean(torch.tensor(eval_loss_rec)).item()
