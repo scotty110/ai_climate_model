@@ -43,6 +43,17 @@ def load_hdf5(filename:str):
     return data
 
 
+def normalize_tensor(data:torch.tensor):
+    # Compute mean and std along the batch_size, x1, and x2 dimensions
+    mean = data.mean(dim=(0, 3, 4), keepdim=True)
+    std = data.std(dim=(0, 3, 4), keepdim=True)
+    
+    # Normalize the data
+    normalized_data = (data - mean) / (std + 1e-7)  # Add a small constant to avoid division by zero
+    
+    return normalized_data, mean, std
+
+
 def stack_data(data:list[dict], key:str) -> torch.Tensor:
     return torch.stack([torch.tensor(entry[key]) for entry in data])
 
@@ -64,6 +75,11 @@ def generate_stacks(data:list[dict]) -> tuple[torch.Tensor, torch.Tensor, torch.
 
     y = stack_data(data, 'y')
     y = y.transpose(2, 1)
+
+    if True:
+        #landmass, _, _= normalize_tensor(landmass)
+        x, _, _ = normalize_tensor(x)
+        y, _, _ = normalize_tensor(y)
     
     return (landmass, x, y)
 
