@@ -208,6 +208,27 @@ def load_file_data(file_list:dict) -> dict:
         l['arrays'] = array_dict
     return file_list
 
+'''
+Crop the UM 70 vertical levels to the 32 in CAM
+'''
+def crop_UM_to_CAM(array: np.ndarray) -> np.ndarray:
+    CAM_levels = [3.643466,   7.59482 ,  14.356632,  24.61222 ,  35.92325 ,  43.19375 ,
+        51.677499,  61.520498,  73.750958,  87.82123 , 103.317127, 121.547241,
+        142.994039, 168.22508 , 197.908087, 232.828619, 273.910817, 322.241902,
+        379.100904, 445.992574, 524.687175, 609.778695, 691.38943 , 763.404481,
+        820.858369, 859.534767, 887.020249, 912.644547, 936.198398, 957.48548 ,
+        976.325407, 992.556095]
+
+    indices = np.zeros((len(CAM_levels), 2, 2), dtype=int)
+    # Convert to hPa
+    array = array/100.0
+
+    for j in range(len(CAM_levels)):
+        indices[j,0,0] = np.argmin(np.abs(CAM_levels - array[j,0,0]))
+        indices[j,1,0] = np.argmin(np.abs(CAM_levels - array[j,1,0]))
+        indices[j,0,1] = np.argmin(np.abs(CAM_levels - array[j,0,1]))
+        indices[j,1,1] = np.argmin(np.abs(CAM_levels - array[j,1,1]))
+    return indices.flatten()
 
 '''
 Data Processing
@@ -234,14 +255,24 @@ def create_pairs(d:dict) -> dict:
     return_dict['landmass'] = np.array([lm_avg, oro_avg, oro_std]) # Will need to make sure in same dim
 
     # Get t_avg, qv_avg, p_avg
-    t_avg = d['AVG_16004']
-    qv_avg = d['AVG_00010']
-    p_avg = d['AVG_00408']
+    vertical_indices = crop_UM_to_CAM(d['AVG_00408'])
+
+    p_avg = d['AVG_00408'].flatten()[vertical_indices]
+    t_avg = d['AVG_16004'].flatten()[vertical_indices]
+    qv_avg = d['AVG_00010'].flatten()[vertical_indices]
+
+    p_avg = p_avg.reshape((32, 2, 2))
+    t_avg = t_avg.reshape((32, 2, 2))
+    qv_avg = qv_avg.reshape((32, 2, 2))
     return_dict['x'] = np.array([t_avg, qv_avg, p_avg])
 
     # Get t_std, qv_std
-    t_std = d['STD_16004'] 
-    qv_std = d['STD_00010']
+    t_std = d['STD_16004'].flatten()[vertical_indices]
+    qv_std = d['STD_00010'].flatten()[vertical_indices]
+
+    t_std = t_std.reshape((32, 2, 2))
+    qv_std = qv_std.reshape((32, 2, 2))
+
     return_dict['y'] = np.array([t_std, qv_std])
 
     return return_dict
@@ -285,7 +316,7 @@ def save_h5(data:list[dict], filename:str):
 
 
 if __name__ == '__main__':
-    file_dir = '/home/squirt/Documents/data/weather_data/'
+    file_dir = '/home/dan/Documents/MSc/weather_data'
 
     # Load files into data list of lists 
     days = get_days(file_dir)
